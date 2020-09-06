@@ -1,0 +1,12 @@
+@import './var.scss';
+
+.page-grey-background {
+  background-color: $pageGreyBackgroundColor;
+}
+.border-bottom-line {
+  height: 1px;
+  width: 100%;
+  background-color: $secondLevelBorderColor;
+  transform: scaleY(0.5);
+  margin: 5px 0;
+}
