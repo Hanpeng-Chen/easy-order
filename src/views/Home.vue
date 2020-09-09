@@ -28,7 +28,7 @@
                 <span class="price">￥{{fen2yuan(menu.price)}}</span>
                 <div class="stepper-wrap">
                   <button :class="['stepper__button', 'stepper__minus', menu.count > 0 ? '' : 'stepper__minus--disabled']" @click="clickMinus(menu)"></button>
-                  <input disabled class="stepper__value" :value="menu.count" />
+                  <span class="stepper__value">{{menu.count}}</span>
                   <button class="stepper__button stepper__plus" @click="clickPlus(menu)"></button>
                 </div>
               </div>
@@ -62,22 +62,33 @@
                   name="close"
                   size="25"
                   color="#409EFF"
-                  @click="showSelectMenuDialog = false">
+                  @click="closeDialog">
         </van-icon>
         <span class="dialog-title">{{dialogData.name}}</span>
         <div v-for="(item, index) in dialogData.specifications"
              :key="index"
              class="label-wrap">
           <div class="label-title">{{item.name}}</div>
-          <div class="label-group">
+          <div class="label-group" v-if="!item.multi">
+            <div v-for="(option, index) in item.options"
+                :key="option.name"
+                @click="clickRadioLabel(item.options, index)">
+              <span :class="[option.count === 1 ? 'radio-label-item__active' : 'radio-label-item']">{{option.name}}</span>
+            </div>
+          </div>
+          <div class="label-group" v-else>
             <div v-for="option in item.options"
                 :key="option.name">
-              <span class="label-item">{{option.name}}</span>
+              <span :class="[option.count > 0 ? 'radio-label-item__active' : 'radio-label-item']"
+                    @click="clickMultiCheckBoxLabel(option)">
+                {{option.name}}{{option.count > 0 ? ' x ' + option.count : ''}}
+              </span>
+              <van-icon v-if="option.count > 0" @click="resetMultiCheckBoxItem(option)" name="close" color="#409EFF" class="label-close" />
             </div>
           </div>
         </div>
         <div class="dialog-footer">
-          <span class="dialog-footer__price">￥{{111}}</span>
+          <span class="dialog-footer__price">￥{{calcDialogSelectedPrice()}}</span>
           <van-button type="info" class="dialog-footer__button" round size="mini" @click="confirmSelect">选定</van-button>
         </div>
       </div>
@@ -140,11 +151,13 @@ export default {
                   options: [
                     {
                       name: '小份',
-                      extraPrice: 0
+                      extraPrice: 0,
+                      count: 0
                     },
                     {
                       name: '大份',
-                      extraPrice: 100
+                      extraPrice: 100,
+                      count: 0
                     }
                   ]
                 }
@@ -177,11 +190,13 @@ export default {
                   options: [
                     {
                       name: '手工面',
-                      extraPrice: 0
+                      extraPrice: 0,
+                      count: 0
                     },
                     {
                       name: '刀削面',
-                      extraPrice: 100
+                      extraPrice: 100,
+                      count: 0
                     }
                   ]
                 },
@@ -191,35 +206,43 @@ export default {
                   options: [
                     {
                       name: '青菜',
-                      extraPrice: 100
+                      extraPrice: 100,
+                      count: 0
                     },
                     {
                       name: '牛肚',
-                      extraPrice: 200
+                      extraPrice: 200,
+                      count: 0
                     },
                     {
                       name: '鱼丸',
-                      extraPrice: 150
+                      extraPrice: 150,
+                      count: 0
                     },
                     {
                       name: '金针菇',
-                      extraPrice: 50
+                      extraPrice: 50,
+                      count: 0
                     },
                     {
-                      name: '青菜',
-                      extraPrice: 100
+                      name: '青菜1',
+                      extraPrice: 100,
+                      count: 0
                     },
                     {
-                      name: '牛肚',
-                      extraPrice: 200
+                      name: '牛肚1',
+                      extraPrice: 200,
+                      count: 0
                     },
                     {
-                      name: '鱼丸',
-                      extraPrice: 150
+                      name: '鱼丸1',
+                      extraPrice: 150,
+                      count: 0
                     },
                     {
-                      name: '金针菇',
-                      extraPrice: 50
+                      name: '金针菇1',
+                      extraPrice: 50,
+                      count: 0
                     }
                   ]
                 }
@@ -260,6 +283,17 @@ export default {
       }
       return count === 0 ? '' : count
     },
+    calcDialogSelectedPrice () {
+      let price = this.dialogData.price
+      if (this.dialogData.specifications) {
+        this.dialogData.specifications.forEach(item => {
+          item.options.forEach(o => {
+            price += o.extraPrice * (o.count || 0)
+          })
+        })
+      }
+      return utils.fen2yuan(price)
+    },
     sideBarChange (index) {
       this.showSubMenus = this.menus[index].subMenus
     },
@@ -284,7 +318,29 @@ export default {
       }
       console.error(menu)
     },
+    closeDialog () {
+      this.showSelectMenuDialog = false
+      this.dialogData = {}
+    },
     confirmSelect () {
+      this.showSelectMenuDialog = false
+      this.dialogData = {}
+    },
+    // 点击单选label
+    clickRadioLabel (group, index) {
+      for (let i = 0; i < group.length; i++) {
+        if (i === index) {
+          group[i].count = 1
+        } else {
+          group[i].count = 0
+        }
+      }
+    },
+    clickMultiCheckBoxLabel (item) {
+      item.count++
+    },
+    resetMultiCheckBoxItem (item) {
+      item.count = 0
     }
   }
 }
@@ -515,12 +571,24 @@ export default {
       align-items: center;
       flex-wrap: wrap;
       line-height: 30px;
-      .label-item {
+      .radio-label-item {
         border: 1px solid $themeColor;
         color: $themeColor;
         padding: 2px 5px;
         margin-top: 2px;
         margin-right: 5px;
+      }
+      .radio-label-item__active {
+        border: none;
+        color: #FFF;
+        background-color: $themeColor;
+        padding: 2px 5px;
+        margin-top: 2px;
+        margin-right: 5px;
+      }
+      .label-close {
+        margin-right: 8px;
+        padding-top: 2px;
       }
     }
   }
