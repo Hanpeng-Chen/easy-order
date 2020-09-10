@@ -27,8 +27,8 @@
               <div class="menu-price-count">
                 <span class="price">￥{{fen2yuan(menu.price)}}</span>
                 <div class="stepper-wrap">
-                  <button :class="['stepper__button', 'stepper__minus', menu.count > 0 ? '' : 'stepper__minus--disabled']" @click="clickMinus(menu)"></button>
-                  <span class="stepper__value">{{menu.count}}</span>
+                  <button :class="['stepper__button', 'stepper__minus', calcMenuItemSelectedCount(menu.id) > 0 ? '' : 'stepper__minus--disabled']" @click="clickMinus(menu)"></button>
+                  <span class="stepper__value">{{calcMenuItemSelectedCount(menu.id)}}</span>
                   <button class="stepper__button stepper__plus" @click="clickPlus(menu)"></button>
                 </div>
               </div>
@@ -37,12 +37,45 @@
         </div>
 
         <van-action-sheet v-model="showSelectedMenus">
-          <div>1111111</div>
+          <div class="action-sheet-wrap">
+            <div class="action-sheet-header-wrap">
+              <div class="delete-icon-wrap" @click="clearSelectedMenus">
+                <van-icon name="delete" size="14"></van-icon>
+                <span>清空购物车</span>
+              </div>
+            </div>
+            <div class="action-sheet-list-wrap">
+              <div v-for="(item, index) in selectedMenus" :key="index" class="action-sheet-list-item-wrap">
+                <img :src="item.imgUrl" />
+                <div class="list-item-content-wrap">
+                  <div class="list-item-content-top">
+                    <div class="name">{{item.name}}{{item.name}}</div>
+                    <div class="label-wrap">
+                      <div v-for="(label, index) in calcLabels(item.specifications)"
+                          :key="index">
+                        <span class="label-value">
+                          {{label}}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="menu-price-count">
+                    <span class="price">￥{{fen2yuan(item.price)}}</span>
+                    <div class="stepper-wrap">
+                      <button :class="['stepper__button', 'stepper__minus', calcMenuItemSelectedCount(item.id) > 0 ? '' : 'stepper__minus--disabled']" @click="clickMinus(item)"></button>
+                      <span class="stepper__value">{{calcMenuItemSelectedCount(item.id)}}</span>
+                      <button class="stepper__button stepper__plus" @click="clickPlus(item)"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </van-action-sheet>
       </div>
 
       <van-submit-bar style="z-index: 2100;"
-                      :price="30500"
+                      :price="calcTotalAmount"
                       button-text="下单"
                       @submit="onSubmit"
                       button-color="#409EFF">
@@ -69,18 +102,25 @@
              :key="index"
              class="label-wrap">
           <div class="label-title">{{item.name}}</div>
-          <div class="label-group" v-if="!item.multi">
+          <div class="label-group" v-if="item.type === 'radio'">
             <div v-for="(option, index) in item.options"
                 :key="option.name"
-                @click="clickRadioLabel(item.options, index)">
+                @click="clickLabel(item, index)">
               <span :class="[option.count === 1 ? 'radio-label-item__active' : 'radio-label-item']">{{option.name}}</span>
             </div>
           </div>
-          <div class="label-group" v-else>
-            <div v-for="option in item.options"
+          <div class="label-group" v-if="item.type === 'checkbox'">
+            <div v-for="(option, index) in item.options"
+                :key="option.name"
+                @click="clickLabel(item, index)">
+              <span :class="[option.count === 1 ? 'radio-label-item__active' : 'radio-label-item']">{{option.name}}</span>
+            </div>
+          </div>
+          <div class="label-group" v-if="item.type === 'multipleCheckbox'">
+            <div v-for="(option, index) in item.options"
                 :key="option.name">
               <span :class="[option.count > 0 ? 'radio-label-item__active' : 'radio-label-item']"
-                    @click="clickMultiCheckBoxLabel(option)">
+                    @click="clickLabel(item, index)">
                 {{option.name}}{{option.count > 0 ? ' x ' + option.count : ''}}
               </span>
               <van-icon v-if="option.count > 0" @click="resetMultiCheckBoxItem(option)" name="close" color="#409EFF" class="label-close" />
@@ -113,6 +153,7 @@ export default {
       showSelectMenuDialog: false,
       dialogData: {},
       showSubMenus: [],
+      selectedMenus: [],
       menus: [
         {
           categoryId: 1,
@@ -146,7 +187,7 @@ export default {
               imgUrl: 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1599393686884&di=68be869a0b1012f559559c195dee192f&imgtype=0&src=http%3A%2F%2Fwww.537tuan.com%2Fwebedit_ok%2Fuploadfile%2F20141204150227512.jpg',
               specifications: [
                 {
-                  multi: false,
+                  type: 'radio',
                   name: '规格',
                   options: [
                     {
@@ -185,7 +226,7 @@ export default {
               imgUrl: 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1599393686884&di=68be869a0b1012f559559c195dee192f&imgtype=0&src=http%3A%2F%2Fwww.537tuan.com%2Fwebedit_ok%2Fuploadfile%2F20141204150227512.jpg',
               specifications: [
                 {
-                  multi: false,
+                  type: 'radio',
                   name: '面料',
                   options: [
                     {
@@ -201,7 +242,28 @@ export default {
                   ]
                 },
                 {
-                  multi: true,
+                  type: 'checkbox',
+                  name: '加料',
+                  options: [
+                    {
+                      name: '葱花',
+                      extraPrice: 1,
+                      count: 0
+                    },
+                    {
+                      name: '香菜',
+                      extraPrice: 1,
+                      count: 0
+                    },
+                    {
+                      name: '辣椒',
+                      extraPrice: 1,
+                      count: 0
+                    }
+                  ]
+                },
+                {
+                  type: 'multipleCheckbox',
                   name: '加料',
                   options: [
                     {
@@ -223,26 +285,6 @@ export default {
                       name: '金针菇',
                       extraPrice: 50,
                       count: 0
-                    },
-                    {
-                      name: '青菜1',
-                      extraPrice: 100,
-                      count: 0
-                    },
-                    {
-                      name: '牛肚1',
-                      extraPrice: 200,
-                      count: 0
-                    },
-                    {
-                      name: '鱼丸1',
-                      extraPrice: 150,
-                      count: 0
-                    },
-                    {
-                      name: '金针菇1',
-                      extraPrice: 50,
-                      count: 0
                     }
                   ]
                 }
@@ -257,13 +299,31 @@ export default {
   computed: {
     calcTotalCount () {
       let count = 0
-      for (let i = 0; i < this.menus.length; i++) {
-        const item = this.menus[i]
-        for (let j = 0; j < item.subMenus.length; j++) {
-          count += item.subMenus[j].count || 0
-        }
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        count += item.count || 0
       }
       return count === 0 ? '' : count
+    },
+    calcTotalAmount () {
+      let amount = 0
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        if (item.specifications && item.specifications.length > 0) {
+          let price = item.price
+          item.specifications.forEach(spec => {
+            if (spec.options && spec.options.length > 0) {
+              spec.options.forEach(option => {
+                price += option.extraPrice * option.count
+              })
+            }
+          })
+          amount += item.count * price
+        } else {
+          amount += item.price * item.count
+        }
+      }
+      return amount
     }
   },
   mounted () {
@@ -277,9 +337,15 @@ export default {
   methods: {
     fen2yuan: utils.fen2yuan,
     calcSideBarBadge (subMenus) {
+      const ids = []
+      subMenus.forEach(item => {
+        ids.push(item.id)
+      })
       let count = 0
-      for (let i = 0; i < subMenus.length; i++) {
-        count += subMenus[i].count || 0
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        if (ids.indexOf(this.selectedMenus[i].id) > -1) {
+          count += this.selectedMenus[i].count || 0
+        }
       }
       return count === 0 ? '' : count
     },
@@ -302,45 +368,122 @@ export default {
         path: 'confirmOrder'
       })
     },
+    calcMenuItemSelectedCount (id) {
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        if (id === item.id) {
+          return item.count
+        }
+      }
+      return 0
+    },
     // 点击添加按钮
-    clickPlus (menu) {
-      if (menu.specifications && menu.specifications.length > 0) {
-        this.dialogData = menu
+    clickPlus (menuItem) {
+      if (menuItem.specifications && menuItem.specifications.length > 0) {
+        this.dialogData = JSON.parse(JSON.stringify(menuItem))
         this.showSelectMenuDialog = true
       } else {
-        menu.count++
+        // 没有其他附加选项
+        let isIn = false
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (menuItem.id === this.selectedMenus[i].id) {
+            this.selectedMenus[i].count++
+            isIn = true
+            break
+          }
+        }
+        if (!isIn) {
+          const item = JSON.parse(JSON.stringify(menuItem))
+          item.count++
+          this.selectedMenus.push(item)
+        }
       }
     },
     // 点击减少按钮
     clickMinus (menu) {
-      if (menu.count > 0) {
-        menu.count--
+      if (this.calcMenuItemSelectedCount(menu.id) === 0) {
+        return
       }
-      console.error(menu)
+      if (!menu.specifications || menu.specifications.length === 0) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (menu.id === this.selectedMenus[i].id) {
+            this.selectedMenus[i].count--
+            if (this.selectedMenus[i].count === 0) {
+              this.selectedMenus.splice(i, 1)
+            }
+            break
+          }
+        }
+      }
     },
     closeDialog () {
       this.showSelectMenuDialog = false
       this.dialogData = {}
     },
     confirmSelect () {
+      this.dialogData.count = 1
+      const newSpecifications = []
+      this.dialogData.specifications.forEach(spec => {
+        const newOptions = []
+        spec.options.forEach(item => {
+          if (item.count > 0) {
+            newOptions.push(item)
+          }
+        })
+        if (newOptions.length > 0) {
+          spec.options = newOptions
+          newSpecifications.push(spec)
+        }
+      })
+      this.dialogData.specifications = newSpecifications
+      this.selectedMenus.push(this.dialogData)
       this.showSelectMenuDialog = false
       this.dialogData = {}
     },
     // 点击单选label
-    clickRadioLabel (group, index) {
-      for (let i = 0; i < group.length; i++) {
-        if (i === index) {
-          group[i].count = 1
-        } else {
-          group[i].count = 0
+    clickLabel (specification, index) {
+      if (specification.type === 'radio') {
+        for (let i = 0; i < specification.options.length; i++) {
+          if (i === index) {
+            specification.options[i].count = 1
+          } else {
+            specification.options[i].count = 0
+          }
         }
       }
-    },
-    clickMultiCheckBoxLabel (item) {
-      item.count++
+      if (specification.type === 'checkbox') {
+        if (specification.options[index].count === 0) {
+          specification.options[index].count = 1
+        } else {
+          specification.options[index].count = 0
+        }
+      }
+      if (specification.type === 'multipleCheckbox') {
+        specification.options[index].count++
+      }
     },
     resetMultiCheckBoxItem (item) {
       item.count = 0
+    },
+    clearSelectedMenus () {
+      this.selectedMenus = []
+      this.showSelectedMenus = false
+    },
+    calcLabels (data) {
+      if (!data) {
+        return []
+      }
+      const list = []
+      data.forEach(item => {
+        item.options.forEach(option => {
+          if (item.type === 'multipleCheckbox') {
+            list.push(`${option.name} x ${option.count}`)
+          } else {
+            list.push(option.name)
+          }
+        })
+      })
+      return list
     }
   }
 }
@@ -448,80 +591,74 @@ export default {
       font-weight: bold;
       text-align: left;
     }
-    .menu-price-count {
-      display: inline-flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      .price {
-        color: red;
-      }
+  }
+}
 
-      .stepper-wrap {
-        display: inline-flex;
-        flex-direction: row;
-        justify-content: flex-end;
-        align-items: center;
-        .stepper__button {
-          width: 18px;
-          height: 18px;
-          border-radius: 100%;
-          position: relative;
-          box-sizing: border-box;
-          cursor: pointer;
-        }
-        .stepper__minus {
-          color: $themeColor;
-          border: 1px solid $themeColor;
-          background-color: #FFF;
-        }
-        .stepper__minus--disabled {
-          opacity: .3;
-        }
-        .stepper__plus {
-          color: #FFF;
-          background-color: $themeColor;
-          border: 0;
-        }
-        .stepper__minus::before, .stepper__plus::after {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          background-color: currentColor;
-          -webkit-transform: translate(-50%,-50%);
-          transform: translate(-50%,-50%);
-          content: '';
-          width: 50%;
-          height: 1px;
-        }
-        .stepper__plus::before {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          background-color: currentColor;
-          -webkit-transform: translate(-50%,-50%);
-          transform: translate(-50%,-50%);
-          content: '';
-          height: 50%;
-          width: 1px;
-        }
-        .stepper__value {
-          font-size: 14px;
-          width: 32px;
-          margin: 0 2px;
-          border: none;
-          text-align: center;
-        }
-      }
-      /deep/ .van-stepper--round .van-stepper__plus {
-        background-color: $themeColor;
-      }
+.menu-price-count {
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
 
-      /deep/ .van-stepper--round .van-stepper__minus {
-        color: $themeColor;
-        border-color: $themeColor;
-      }
-    }
+.price {
+  color: red;
+}
+
+.stepper-wrap {
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  .stepper__button {
+    width: 18px;
+    height: 18px;
+    border-radius: 100%;
+    position: relative;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+  .stepper__minus {
+    color: $themeColor;
+    border: 1px solid $themeColor;
+    background-color: #FFF;
+  }
+  .stepper__minus--disabled {
+    opacity: .3;
+  }
+  .stepper__plus {
+    color: #FFF;
+    background-color: $themeColor;
+    border: 0;
+  }
+  .stepper__minus::before, .stepper__plus::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background-color: currentColor;
+    -webkit-transform: translate(-50%,-50%);
+    transform: translate(-50%,-50%);
+    content: '';
+    width: 50%;
+    height: 1px;
+  }
+  .stepper__plus::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background-color: currentColor;
+    -webkit-transform: translate(-50%,-50%);
+    transform: translate(-50%,-50%);
+    content: '';
+    height: 50%;
+    width: 1px;
+  }
+  .stepper__value {
+    font-size: 14px;
+    width: 32px;
+    margin: 0 2px;
+    border: none;
+    text-align: center;
   }
 }
 
@@ -589,6 +726,88 @@ export default {
       .label-close {
         margin-right: 8px;
         padding-top: 2px;
+      }
+    }
+  }
+}
+
+.action-sheet-wrap {
+  max-height: 350px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.action-sheet-header-wrap {
+  margin-top: 5px;
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid $secondLevelBorderColor;
+}
+.delete-icon-wrap {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+  span {
+    font-size: 14px;
+    margin-left: 5px;
+    line-height: 30px;
+  }
+}
+.action-sheet-list-wrap {
+  flex: 1;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+}
+.action-sheet-list-item-wrap {
+  margin: 10px;
+  display: flex;
+  align-items: center;
+
+  img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-right: 10px;
+  }
+  .list-item-content-wrap {
+    flex: 1;
+    min-height: 90px;
+    padding: 5px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-bottom: 1px solid $secondLevelBorderColor;
+
+    .list-item-content-top {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+      margin-bottom: 10px;
+
+      .name {
+        font-size: 16px;
+        font-weight: 500;
+        text-align: left;
+      }
+      .label-wrap {
+        margin-top: 5px;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        .label-value {
+          color: $secondaryTextColor;
+          font-size: 15px;
+          line-height: 20px;
+          border: 1px solid $placeholderTextColor;
+          padding: 0 3px;
+          margin-right: 5px;
+          margin-bottom: 5px;
+        }
       }
     }
   }
