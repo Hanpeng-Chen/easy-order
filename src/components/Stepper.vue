@@ -1,5 +1,5 @@
 <template>
-  <div class="stepper-wrap">
+  <div class="stepper-wrap" @click.stop>
     <div class="stepper-wrap">
       <button :class="['stepper__button', 'stepper__minus', disableMinus ? 'stepper__minus--disabled' : '']" @click="clickMinus"></button>
       <span class="stepper__value">{{value}}</span>

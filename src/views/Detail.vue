@@ -1,50 +1,59 @@
 <template>
   <div class="page">
-    <!-- <img :src="data.imgUrl" class="detail-image" /> -->
-    <van-image
-      width="100%"
-      height="250"
-      fit="cover"
-      :src="data.imgUrl"
-    />
+    <div class="content-wrapper">
+      <van-image
+        width="100%"
+        height="250"
+        fit="cover"
+        :src="data.imgUrl"
+      />
 
-    <div class="menu-detail-wrapper">
-      <span class="menu-name">{{data.name}}</span>
+      <div class="menu-detail-wrapper">
+        <span class="menu-name">{{data.name}}</span>
 
-      <div class="menu-price-count">
-        <span class="price">￥{{fen2yuan(menu.price)}}</span>
-        <div class="stepper-wrap">
-          <button :class="['stepper__button', 'stepper__minus', calcMenuItemSelectedCount(menu.id) > 0 ? '' : 'stepper__minus--disabled']" @click="clickMinus(menu)"></button>
-          <span class="stepper__value">{{calcMenuItemSelectedCount(menu.id)}}</span>
-          <button class="stepper__button stepper__plus" @click="clickPlus(menu)"></button>
+        <div class="menu-price-count">
+          <span class="price">￥{{fen2yuan(data.price)}}</span>
+          <stepper :value="calcMenuItemSelectedCount(data.id)"
+                  :disableMinus="calcMenuItemSelectedCount(data.id) === 0"
+                  @plus="clickPlus(data)"
+                  @minus="clickMinus(data)">
+          </stepper>
         </div>
+
+        <span class="menu-remarks">{{data.remarks}}</span>
       </div>
 
-      <span class="menu-remarks">{{data.remarks}}</span>
+      <van-submit-bar style="z-index: 2100;"
+                      :price="calcTotalAmount"
+                      button-text="下单"
+                      @submit="onSubmit"
+                      button-color="#409EFF">
+        <van-icon
+          name="shopping-cart"
+          size="30"
+          color="#409EFF"
+          @click="showSelectedMenus = !showSelectedMenus"
+          :badge="calcTotalCount"
+          />
+      </van-submit-bar>
     </div>
 
     <div class="menu-extras-wrapper"></div>
-
-    <van-submit-bar style="z-index: 2100;"
-                    :price="calcTotalAmount"
-                    button-text="下单"
-                    @submit="onSubmit"
-                    button-color="#409EFF">
-      <van-icon
-        name="shopping-cart"
-        size="30"
-        color="#409EFF"
-        @click="showSelectedMenus = !showSelectedMenus"
-        :badge="calcTotalCount"
-        />
-    </van-submit-bar>
   </div>
 </template>
 
 <script>
+import utils from '../common/utils'
+import Stepper from '../components/Stepper.vue'
+
 export default {
+  components: {
+    Stepper
+  },
   data () {
     return {
+      showSelectedMenus: false,
+      selectedMenus: [],
       data: {
         id: 30001,
         name: '牛肉面',
@@ -120,9 +129,90 @@ export default {
       }
     }
   },
+  computed: {
+    calcTotalCount () {
+      let count = 0
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        count += item.count || 0
+      }
+      return count === 0 ? '' : count
+    },
+    calcTotalAmount () {
+      let amount = 0
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        if (item.specifications && item.specifications.length > 0) {
+          let price = item.price
+          item.specifications.forEach(spec => {
+            if (spec.options && spec.options.length > 0) {
+              spec.options.forEach(option => {
+                price += option.extraPrice * option.count
+              })
+            }
+          })
+          amount += item.count * price
+        } else {
+          amount += item.price * item.count
+        }
+      }
+      return amount
+    }
+  },
 
   mounted () {
     document.title = '详情'
+  },
+  methods: {
+    fen2yuan: utils.fen2yuan,
+    calcMenuItemSelectedCount (id) {
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        if (id === item.id) {
+          return item.count
+        }
+      }
+      return 0
+    },
+    // 点击添加按钮
+    clickPlus (menuItem) {
+      if (menuItem.specifications && menuItem.specifications.length > 0) {
+        this.dialogData = JSON.parse(JSON.stringify(menuItem))
+        this.showSelectMenuDialog = true
+      } else {
+        // 没有其他附加选项
+        let isIn = false
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (menuItem.id === this.selectedMenus[i].id) {
+            this.selectedMenus[i].count++
+            isIn = true
+            break
+          }
+        }
+        if (!isIn) {
+          const item = JSON.parse(JSON.stringify(menuItem))
+          item.count++
+          this.selectedMenus.push(item)
+        }
+      }
+    },
+    // 点击减少按钮
+    clickMinus (menu) {
+      if (this.calcMenuItemSelectedCount(menu.id) === 0) {
+        return
+      }
+      if (!menu.specifications || menu.specifications.length === 0) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (menu.id === this.selectedMenus[i].id) {
+            this.selectedMenus[i].count--
+            if (this.selectedMenus[i].count === 0) {
+              this.selectedMenus.splice(i, 1)
+            }
+            break
+          }
+        }
+      }
+    }
   }
 }
 </script>
@@ -130,12 +220,17 @@ export default {
 <style lang="scss" scoped>
 .page {
   height: 100vh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
+  // position: relative;
   background-color: $pageGreyBackgroundColor;
   color: $regularTextColor;
   font-size: 15px;
+}
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  // position: relative;
 }
 .detail-image {
   width: 100%;

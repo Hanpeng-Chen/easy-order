@@ -20,7 +20,7 @@
         </van-sidebar>
 
         <div class="content-list-wrap">
-          <div v-for="menu in showSubMenus" :key="menu.id" class="content-item-wrap">
+          <div v-for="menu in showSubMenus" :key="menu.id" class="content-item-wrap" @click="go2Detail(menu.id)">
             <img :src="menu.imgUrl">
             <div class="content-item-desc">
               <span class="menu-name">{{menu.name}}</span>
@@ -416,6 +416,14 @@ export default {
         })
       })
       return list
+    },
+    go2Detail (id) {
+      this.$router.push({
+        path: '/detail',
+        query: {
+          id: id
+        }
+      })
     }
   }
 }
