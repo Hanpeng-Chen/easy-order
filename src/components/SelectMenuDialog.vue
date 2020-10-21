@@ -49,11 +49,17 @@
 
 <script>
 import utils from '../common/utils'
+import { mapGetters } from 'vuex'
 export default {
   name: 'SelectMenuDialog',
   props: {
     show: Boolean,
     data: Object
+  },
+  computed: {
+    ...mapGetters([
+      'selectedMenus'
+    ])
   },
   methods: {
     calcDialogSelectedPrice () {
@@ -93,7 +99,7 @@ export default {
       item.count = 0
     },
     confirmSelect () {
-      this.data.count = 1
+      // this.data.count = 1
       const newSpecifications = []
       this.data.specifications.forEach(spec => {
         const newOptions = []
@@ -108,9 +114,25 @@ export default {
         }
       })
       this.data.specifications = newSpecifications
-      this.selectedMenus.push(this.data)
-      this.showSelectMenuDialog = false
-      this.data = {}
+
+      let isIn = false
+      if (this.selectedMenus) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (this.data.id === this.selectedMenus[i].id && JSON.stringify(this.selectedMenus[i].specifications) === JSON.stringify(this.data.specifications)) {
+            this.selectedMenus[i].count++
+            isIn = true
+            break
+          }
+        }
+      }
+      if (!isIn) {
+        const item = JSON.parse(JSON.stringify(this.data))
+        item.count++
+        this.$store.commit('ADD_MEMUS', item)
+      } else {
+        this.$store.commit('UPDATE_SELECTED_MENUS', this.selectedMenus)
+      }
+      this.$emit('close')
     },
     closeDialog () {
       this.show = false

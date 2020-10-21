@@ -165,6 +165,11 @@ export default {
   },
   methods: {
     fen2yuan: utils.fen2yuan,
+    onSubmit () {
+      this.$router.push({
+        path: 'confirmOrder'
+      })
+    },
     calcMenuItemSelectedCount (id) {
       for (let i = 0; i < this.selectedMenus.length; i++) {
         const item = this.selectedMenus[i]
@@ -240,9 +245,26 @@ export default {
 }
 .menu-detail-wrapper {
   background-color: #FFF;
-  width: 100%;
   padding: 10px;
   display: flex;
   flex-direction: column;
+  .menu-name {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: left;
+  }
+  .menu-remarks {
+    text-align: left;
+  }
+}
+.menu-price-count {
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price {
+  color: red;
 }
 </style>

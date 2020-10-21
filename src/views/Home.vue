@@ -57,7 +57,8 @@
     </div>
 
     <select-menu-dialog :show="showSelectMenuDialog"
-                        :data="dialogData">
+                        :data="dialogData"
+                        @close="closeSelectMenuDialog">
     </select-menu-dialog>
   </div>
 </template>
@@ -68,6 +69,7 @@ import utils from '@/common/utils'
 import Stepper from '../components/Stepper.vue'
 import SelectMenuDialog from '../components/SelectMenuDialog.vue'
 import ShoppingCartPopup from '../components/ShoppingCartPopup.vue'
+import { mapGetters } from 'vuex'
 
 export default {
   name: 'Home',
@@ -85,7 +87,7 @@ export default {
       showSelectMenuDialog: false,
       dialogData: {},
       showSubMenus: [],
-      selectedMenus: [],
+      // selectedMenus: [],
       menus: [
         {
           categoryId: 1,
@@ -229,16 +231,24 @@ export default {
     }
   },
   computed: {
+    ...mapGetters([
+      'selectedMenus'
+    ]),
     calcTotalCount () {
       let count = 0
-      for (let i = 0; i < this.selectedMenus.length; i++) {
-        const item = this.selectedMenus[i]
-        count += item.count || 0
+      if (this.selectedMenus) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          const item = this.selectedMenus[i]
+          count += item.count || 0
+        }
       }
       return count === 0 ? '' : count
     },
     calcTotalAmount () {
       let amount = 0
+      if (!this.selectedMenus) {
+        return amount
+      }
       for (let i = 0; i < this.selectedMenus.length; i++) {
         const item = this.selectedMenus[i]
         if (item.specifications && item.specifications.length > 0) {
@@ -274,9 +284,11 @@ export default {
         ids.push(item.id)
       })
       let count = 0
-      for (let i = 0; i < this.selectedMenus.length; i++) {
-        if (ids.indexOf(this.selectedMenus[i].id) > -1) {
-          count += this.selectedMenus[i].count || 0
+      if (this.selectedMenus) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          if (ids.indexOf(this.selectedMenus[i].id) > -1) {
+            count += this.selectedMenus[i].count || 0
+          }
         }
       }
       return count === 0 ? '' : count
@@ -301,10 +313,12 @@ export default {
       })
     },
     calcMenuItemSelectedCount (id) {
-      for (let i = 0; i < this.selectedMenus.length; i++) {
-        const item = this.selectedMenus[i]
-        if (id === item.id) {
-          return item.count
+      if (this.selectedMenus) {
+        for (let i = 0; i < this.selectedMenus.length; i++) {
+          const item = this.selectedMenus[i]
+          if (id === item.id) {
+            return item.count
+          }
         }
       }
       return 0
@@ -317,17 +331,21 @@ export default {
       } else {
         // 没有其他附加选项
         let isIn = false
-        for (let i = 0; i < this.selectedMenus.length; i++) {
-          if (menuItem.id === this.selectedMenus[i].id) {
-            this.selectedMenus[i].count++
-            isIn = true
-            break
+        if (this.selectedMenus) {
+          for (let i = 0; i < this.selectedMenus.length; i++) {
+            if (menuItem.id === this.selectedMenus[i].id) {
+              this.selectedMenus[i].count++
+              isIn = true
+              break
+            }
           }
         }
         if (!isIn) {
           const item = JSON.parse(JSON.stringify(menuItem))
           item.count++
-          this.selectedMenus.push(item)
+          this.$store.commit('ADD_MEMUS', item)
+        } else {
+          this.$store.commit('UPDATE_SELECTED_MENUS', this.selectedMenus)
         }
       }
     },
@@ -336,7 +354,7 @@ export default {
       if (this.calcMenuItemSelectedCount(menu.id) === 0) {
         return
       }
-      if (!menu.specifications || menu.specifications.length === 0) {
+      if (this.selectedMenus && (!menu.specifications || menu.specifications.length === 0)) {
         for (let i = 0; i < this.selectedMenus.length; i++) {
           if (menu.id === this.selectedMenus[i].id) {
             this.selectedMenus[i].count--
@@ -348,7 +366,7 @@ export default {
         }
       }
     },
-    closeDialog () {
+    closeSelectMenuDialog () {
       this.showSelectMenuDialog = false
       this.dialogData = {}
     },
