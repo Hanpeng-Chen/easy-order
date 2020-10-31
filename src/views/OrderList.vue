@@ -4,7 +4,7 @@
       <div class="card-wrap">
         <span>订单列表</span>
         <div class="border-bottom-line"></div>
-        <div class="list-item-container" v-for="item in orderList" :key="item.id">
+        <div class="list-item-container" v-for="item in orderList" :key="item.id" @click="go2Detail(item)">
           <div class="list-item-body">
             <img :src="item.storeImg" alt="" class="store-img" />
             <div class="item-body-container">
@@ -47,7 +47,16 @@ export default {
   mounted () {
     document.title = '历史订单'
   },
-  methods: {}
+  methods: {
+    go2Detail (item) {
+      this.$router.push({
+        path: '/orderDetail',
+        query: {
+          id: item.id
+        }
+      })
+    }
+  }
 }
 </script>
 

@@ -5,6 +5,7 @@ import Detail from '../views/Detail.vue'
 import ConfirmOrder from '../views/ConfirmOrder.vue'
 import Index from '../views/Index.vue'
 import OrderList from '../views/OrderList.vue'
+import OrderDetail from '../views/OrderDetail.vue'
 
 Vue.use(VueRouter)
 
@@ -33,6 +34,11 @@ const routes = [
     path: '/orderList',
     name: 'OrderList',
     component: OrderList
+  },
+  {
+    path: '/orderDetail',
+    name: 'OrderDetail',
+    component: OrderDetail
   }
 ]
 
