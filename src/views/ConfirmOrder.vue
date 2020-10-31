@@ -12,28 +12,28 @@
         <div class="border-bottom-line"></div>
         <div
           class="order-item-wrap"
-          v-for="item in order"
-          :key="item.id">
+          v-for="(item, menuIndex) in selectedMenus"
+          :key="menuIndex">
           <div class="order-item-info-wrap">
             <div class="order-item-info-left">
               <span class="order-item-name">{{item.name}}</span>
               <span class="order-item-count">{{item.count}}份</span>
             </div>
             <div class="order-item-info-right">
-              <span>￥{{item.price}}</span>
+              <span>￥{{calcItemPrice(item)}}</span>
             </div>
           </div>
           <div class="order-item-label-wrap" v-if="item.specifications && item.specifications.length > 0">
             <span class="order-item-label-value"
-                  v-for="(specification, index) in item.specifications"
+                  v-for="(label, index) in calcLabels(item.specifications)"
                   :key="index">
-              {{specification.name}}{{specification.multi ? ' x ' + specification.count : ''}}
+              {{label}}
             </span>
           </div>
         </div>
         <div class="border-bottom-line"></div>
         <div class="amount-wrap">
-          合计：<span class="amount-value">￥{{amount}}</span>
+          合计：<span class="amount-value">￥{{calcTotalAmount}}</span>
         </div>
       </div>
 
@@ -48,90 +48,85 @@
         />
       </div>
     </div>
-    <div class="button-wrap" @click="go2Pay">支付 ￥{{amount}}</div>
+    <div class="button-wrap" @click="go2Pay">支付 ￥{{calcTotalAmount}}</div>
   </div>
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
+import utils from '../common/utils'
 export default {
   data () {
     return {
       storeName: 'Easy Order',
       tableNo: '1',
-      amount: 255.35,
-      remarks: '',
-      order: [
-        {
-          id: 1,
-          name: '干锅包菜',
-          count: 10,
-          price: 1
-        },
-        {
-          id: 2,
-          name: '紫菜蛋汤',
-          count: 2,
-          price: 100,
-          specifications: [
-            {
-              name: '大份',
-              extraPrice: 100,
-              count: 1,
-              multi: false
+      remarks: ''
+    }
+  },
+  computed: {
+    ...mapGetters([
+      'selectedMenus'
+    ]),
+    calcTotalAmount () {
+      let amount = 0
+      if (!this.selectedMenus) {
+        return amount
+      }
+      for (let i = 0; i < this.selectedMenus.length; i++) {
+        const item = this.selectedMenus[i]
+        if (item.specifications && item.specifications.length > 0) {
+          let price = item.price
+          item.specifications.forEach(spec => {
+            if (spec.options && spec.options.length > 0) {
+              spec.options.forEach(option => {
+                price += option.extraPrice * option.count
+              })
             }
-          ]
-        },
-        {
-          id: 3,
-          name: '牛肉面',
-          count: 1,
-          price: 100,
-          specifications: [
-            {
-              name: '刀削面',
-              extraPrice: 0,
-              count: 1,
-              multi: false
-            },
-            {
-              name: '青菜',
-              extraPrice: 10,
-              count: 1,
-              multi: true
-            },
-            {
-              name: '牛肉',
-              extraPrice: 100,
-              count: 2,
-              multi: true
-            },
-            {
-              name: '刀削面',
-              extraPrice: 0,
-              count: 1,
-              multi: false
-            },
-            {
-              name: '青菜',
-              extraPrice: 10,
-              count: 1,
-              multi: true
-            },
-            {
-              name: '牛肉',
-              extraPrice: 100,
-              count: 2,
-              multi: true
-            }
-          ]
+          })
+          amount += item.count * price
+        } else {
+          amount += item.price * item.count
         }
-      ]
+      }
+      return utils.fen2yuan(amount)
     }
   },
   mounted () {
     document.title = '确认订单'
   },
   methods: {
+    fen2yuan: utils.fen2yuan,
+    calcLabels (data) {
+      if (!data) {
+        return []
+      }
+      const list = []
+      data.forEach(item => {
+        item.options.forEach(option => {
+          if (item.type === 'multipleCheckbox') {
+            list.push(`${option.name} x ${option.count}`)
+          } else {
+            list.push(option.name)
+          }
+        })
+      })
+      return list
+    },
+    calcItemPrice (item) {
+      let price = item.price
+      if (item.specifications) {
+        for (const i in item.specifications) {
+          const specItem = item.specifications[i]
+          if (specItem.options) {
+            for (const j in specItem.options) {
+              price += specItem.options[j].count * specItem.options[j].extraPrice
+            }
+          }
+        }
+      }
+      price = price * item.count
+      return utils.fen2yuan(price)
+    },
     // 解决微信端页面被顶起问题
     temporaryRepair () {
       const el = document.getElementById('mainContent')
@@ -195,7 +190,7 @@ export default {
 .order-item-wrap {
   display: flex;
   flex-direction: column;
-  margin: 3px 0;
+  margin: 5px 0;
   .order-item-info-wrap {
     display: flex;
     flex-direction: row;

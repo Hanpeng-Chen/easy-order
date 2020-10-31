@@ -1,6 +1,6 @@
 <template>
   <div>
-    <van-action-sheet v-model="show">
+    <van-action-sheet v-model="showSelectedMenus" @close="close" :close-on-popstate="true">
       <div class="action-sheet-wrap">
         <div class="action-sheet-header-wrap">
           <div class="delete-icon-wrap" @click="clearSelectedMenus">
@@ -25,7 +25,7 @@
                 </div>
               </div>
               <div class="menu-price-count">
-                <span class="price">￥{{fen2yuan(item.price)}}</span>
+                <span class="price">￥{{calcItemPrice(item)}}</span>
                 <stepper :value="calcMenuItemSelectedCount(item.id)"
                          :disableMinus="calcMenuItemSelectedCount(item.id) === 0"
                          @plus="clickPlus(item)"
@@ -49,12 +49,31 @@ export default {
   components: {
     Stepper
   },
+  data () {
+    return {
+      showSelectedMenus: false
+    }
+  },
   props: {
-    show: Boolean,
+    show: {
+      type: Boolean,
+      default: true
+    },
     data: Array
+  },
+  watch: {
+    show: {
+      handler (val) {
+        this.showSelectedMenus = val
+      },
+      immediate: true
+    }
   },
   methods: {
     fen2yuan: utils.fen2yuan,
+    close () {
+      this.$emit('close')
+    },
     calcMenuItemSelectedCount (id) {
       for (let i = 0; i < this.data.length; i++) {
         const item = this.data[i]
@@ -63,6 +82,21 @@ export default {
         }
       }
       return 0
+    },
+    calcItemPrice (item) {
+      let price = item.price
+      if (item.specifications) {
+        for (const i in item.specifications) {
+          const specItem = item.specifications[i]
+          if (specItem.options) {
+            for (const j in specItem.options) {
+              price += specItem.options[j].count * specItem.options[j].extraPrice
+            }
+          }
+        }
+      }
+      price = price * item.count
+      return utils.fen2yuan(price)
     },
     // 点击添加按钮
     clickPlus (menuItem) {

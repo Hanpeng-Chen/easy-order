@@ -37,7 +37,8 @@
         </div>
 
         <shopping-cart-popup :show="showSelectedMenus"
-                             :data="selectedMenus">
+                             :data="selectedMenus"
+                             @close="showSelectedMenus = false">
         </shopping-cart-popup>
       </div>
 
@@ -87,7 +88,6 @@ export default {
       showSelectMenuDialog: false,
       dialogData: {},
       showSubMenus: [],
-      // selectedMenus: [],
       menus: [
         {
           categoryId: 1,
@@ -308,20 +308,22 @@ export default {
       this.showSubMenus = this.menus[index].subMenus
     },
     onSubmit () {
+      this.showSelectedMenus = false
       this.$router.push({
         path: 'confirmOrder'
       })
     },
     calcMenuItemSelectedCount (id) {
+      let count = 0
       if (this.selectedMenus) {
         for (let i = 0; i < this.selectedMenus.length; i++) {
           const item = this.selectedMenus[i]
           if (id === item.id) {
-            return item.count
+            count += item.count
           }
         }
       }
-      return 0
+      return count
     },
     // 点击添加按钮
     clickPlus (menuItem) {
